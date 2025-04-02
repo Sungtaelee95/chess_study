@@ -79,9 +79,6 @@ class ChessGame(
         val oriSquare = board[oriNode.row][oriNode.col]
         board[oriNode.row][oriNode.col] = board[oriNode.row][oriNode.col].pollPiece()
         board[newNode.row][newNode.col] = board[newNode.row][newNode.col].update(oriSquare)
-
-        println(board[oriNode.row][oriNode.col])
-        println(board[newNode.row][newNode.col])
     }
 
     private fun selectNextPosition(
