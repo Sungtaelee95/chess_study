@@ -13,5 +13,5 @@ class SelectPosition(
 
     fun isRecommend() = input.toInt() == 0
 
-    fun selectedPosition() = positions[input.toInt() - 1]
+    fun getPositionNode() = positions[input.toInt() - 1]
 }

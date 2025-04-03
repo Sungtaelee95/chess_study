@@ -129,7 +129,4 @@ enum class Direction(
     DOWN2_RIGHT1(Node(2, 1)),
 }
 
-data class Node(
-    val row: Int,
-    val col: Int,
-)
+

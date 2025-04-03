@@ -9,6 +9,7 @@ import model.data.Node
 import model.data.PieceColor
 import model.data.Type
 import util.BoardManager
+import util.ServerConnector
 import view.InputView
 import view.OutputView
 
@@ -16,9 +17,10 @@ class ChessGame(
     private val inputView: InputView,
     private val outputView: OutputView,
     private val boardManager: BoardManager,
+    private val serverManager: ServerConnector
 ) {
-    private lateinit var turnColor: PieceColor
-    private lateinit var board: Array<Array<Square>>
+    private lateinit var _turnColor: PieceColor
+    private lateinit var _board: Array<Array<Square>>
 
     init {
         gameSetUp()
@@ -26,6 +28,7 @@ class ChessGame(
 
     fun start() {
         while (true) {
+            println("선택된 색: ${_turnColor.colorName}")
             printBoard()
             val selectedSquare = selectSquare()
             val selectedNextPosition = selectNextPosition(selectedSquare)
@@ -43,8 +46,8 @@ class ChessGame(
     }
 
     private fun gameSetUp() {
-        board = boardManager.create()
-        turnColor = PieceColor.WHITE
+        _board = boardManager.create()
+        _turnColor = serverManager.getChessPieceColor()
     }
 
     private fun requestRestartGame(): Boolean {
@@ -58,16 +61,16 @@ class ChessGame(
     }
 
     private fun isOtherKingLive(): Boolean {
-        board.forEach { line ->
+        _board.forEach { line ->
             line.forEach {
-                if (it.isEqualOfType(Type.King) && it.isEqualOfColor(turnColor)) return true
+                if (it.isEqualOfType(Type.King) && it.isEqualOfColor(_turnColor)) return true
             }
         }
         return false
     }
 
     private fun turnChange() {
-        turnColor = if (turnColor == PieceColor.WHITE) PieceColor.BLACK else PieceColor.WHITE
+        _turnColor = if (_turnColor == PieceColor.WHITE) PieceColor.BLACK else PieceColor.WHITE
     }
 
     private fun movePiece(
@@ -75,10 +78,11 @@ class ChessGame(
         selectPosition: SelectPosition,
     ) {
         val oriNode = selectedSquare.getPositionNode()
-        val newNode = selectPosition.selectedPosition()
-        val oriSquare = board[oriNode.row][oriNode.col]
-        board[oriNode.row][oriNode.col] = board[oriNode.row][oriNode.col].pollPiece()
-        board[newNode.row][newNode.col] = board[newNode.row][newNode.col].update(oriSquare)
+        val newNode = selectPosition.getPositionNode()
+        val oriSquare = _board[oriNode.row][oriNode.col]
+        _board[oriNode.row][oriNode.col] = _board[oriNode.row][oriNode.col].pollPiece()
+        _board[newNode.row][newNode.col] = _board[newNode.row][newNode.col].update(oriSquare)
+        // 서버에
     }
 
     private fun selectNextPosition(
@@ -105,8 +109,8 @@ class ChessGame(
     }
 
     private fun createHelperBoard(possibleNextPositions: List<Node>): Array<Array<Square>> {
-        val helperBoard = Array(board.size) { Array(board[0].size) { Square(null, BackGround.DARK) } }
-        board.forEachIndexed { row, squares ->
+        val helperBoard = Array(_board.size) { Array(_board[0].size) { Square(null, BackGround.DARK) } }
+        _board.forEachIndexed { row, squares ->
             squares.forEachIndexed { col, square ->
                 helperBoard[row][col] = square
             }
@@ -119,8 +123,8 @@ class ChessGame(
 
     private fun selectSquare(): SelectSquare {
         try {
-            val input = inputView.inputMovePiecePosition(turnColor.colorName).split(",")
-            val selectSquare = SelectSquare(input, board, turnColor)
+            val input = inputView.inputMovePiecePosition(_turnColor.colorName).split(",")
+            val selectSquare = SelectSquare(input, _board, _turnColor)
             return selectSquare
         } catch (e: IllegalArgumentException) {
             outputView.printError(e.message)
@@ -154,7 +158,7 @@ class ChessGame(
         outputView.clear()
         outputView.printColumnIndex()
         outputView.println()
-        board.forEachIndexed { index, squares ->
+        _board.forEachIndexed { index, squares ->
             outputView.printRowIndex(index)
             squares.forEach { square ->
                 val content = square.getContent()
@@ -168,12 +172,3 @@ class ChessGame(
         }
     }
 }
-
-// 폰 색상으로 방향 조절 내일까지
-// 수요일까지 게임 완성.
-// 목요일부터 서버 작성.
-// 코드스타일 정용복 대리님께 여쭤보기
-// 쓰레드 사용하기,
-// 프로토콜 사용하기
-// 블랙팀은 서버에 1바이트씩 보내고 10밀리를 쉬어야함.
-// 레드팀은 제한 없음.
