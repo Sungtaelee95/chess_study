@@ -5,6 +5,7 @@ import model.SelectPosition
 import model.SelectSquare
 import model.Square
 import model.data.BackGround
+import model.data.MoveInformation
 import model.data.Node
 import model.data.PieceColor
 import model.data.Type
@@ -19,7 +20,7 @@ class ChessGame(
     private val boardManager: BoardManager,
     private val serverManager: ServerConnector
 ) {
-    private lateinit var _turnColor: PieceColor
+    private lateinit var _myPieceColor: PieceColor
     private lateinit var _board: Array<Array<Square>>
 
     init {
@@ -28,7 +29,7 @@ class ChessGame(
 
     fun start() {
         while (true) {
-            println("선택된 색: ${_turnColor.colorName}")
+            println("선택된 색: ${_myPieceColor.colorName}")
             printBoard()
             val selectedSquare = selectSquare()
             val selectedNextPosition = selectNextPosition(selectedSquare)
@@ -47,7 +48,7 @@ class ChessGame(
 
     private fun gameSetUp() {
         _board = boardManager.create()
-        _turnColor = serverManager.getChessPieceColor()
+        _myPieceColor = serverManager.getChessPieceColor()
     }
 
     private fun requestRestartGame(): Boolean {
@@ -63,14 +64,14 @@ class ChessGame(
     private fun isOtherKingLive(): Boolean {
         _board.forEach { line ->
             line.forEach {
-                if (it.isEqualOfType(Type.King) && it.isEqualOfColor(_turnColor)) return true
+                if (it.isEqualOfType(Type.King) && it.isEqualOfColor(_myPieceColor)) return true
             }
         }
         return false
     }
 
     private fun turnChange() {
-        _turnColor = if (_turnColor == PieceColor.WHITE) PieceColor.BLACK else PieceColor.WHITE
+        _myPieceColor = if (_myPieceColor == PieceColor.WHITE) PieceColor.BLACK else PieceColor.WHITE
     }
 
     private fun movePiece(
@@ -82,7 +83,8 @@ class ChessGame(
         val oriSquare = _board[oriNode.row][oriNode.col]
         _board[oriNode.row][oriNode.col] = _board[oriNode.row][oriNode.col].pollPiece()
         _board[newNode.row][newNode.col] = _board[newNode.row][newNode.col].update(oriSquare)
-        // 서버에
+        // 서버에 움직인 정보 전달.
+        serverManager.sendMoveInformation(MoveInformation(oriNode, newNode))
     }
 
     private fun selectNextPosition(
@@ -123,8 +125,8 @@ class ChessGame(
 
     private fun selectSquare(): SelectSquare {
         try {
-            val input = inputView.inputMovePiecePosition(_turnColor.colorName).split(",")
-            val selectSquare = SelectSquare(input, _board, _turnColor)
+            val input = inputView.inputMovePiecePosition(_myPieceColor.colorName).split(",")
+            val selectSquare = SelectSquare(input, _board, _myPieceColor)
             return selectSquare
         } catch (e: IllegalArgumentException) {
             outputView.printError(e.message)

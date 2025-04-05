@@ -1,21 +1,15 @@
 package util
 
+import Protocol
 import model.data.MoveInformation
 import model.data.PieceColor
-import java.io.ByteArrayOutputStream
 import java.io.ObjectInputStream
-import java.io.ObjectOutputStream
 import java.io.PrintWriter
-import java.lang.Thread.sleep
 import java.net.Socket
 
 class DelayServerManager(
     private val socket: Socket
 ) : ServerConnector() {
-
-//    init {
-//        sendMoveInformation(MoveInformation(Node(1, 1), Node(3, 3)))
-//    }
 
     override fun disconnectServer() {
         socket.close()
@@ -23,17 +17,8 @@ class DelayServerManager(
 
     override fun sendMoveInformation(moveInformation: MoveInformation) {
         val pw = PrintWriter(socket.outputStream, true)
-        val bos = ByteArrayOutputStream()
-        val oos = ObjectOutputStream(bos)
-        oos.writeObject(moveInformation)
-        val bytes = bos.toByteArray()
-        pw.println(MOVE_SLOW_HEADER)
-        sleep(10)
-        pw.println(bytes.size)
-        bytes.forEach {
-            sleep(10)
-            pw.println(it)
-        }
+        val br = socket.inputStream.bufferedReader()
+        Protocol(Header.SEND_MOVE_SLOW_HEADER, br, pw, moveInformation.toByteArray()).run()
     }
 
     override fun receiveMoveInformation(): MoveInformation {
@@ -46,8 +31,12 @@ class DelayServerManager(
     override fun getChessPieceColor(): PieceColor {
         val pw = PrintWriter(socket.outputStream, true)
         val br = socket.inputStream.bufferedReader()
-        pw.println(COLOR_SLOW_HEADER)
-        val color = if (br.readLine() == PieceColor.BLACK.value) PieceColor.BLACK else PieceColor.WHITE
-        return color
+        val result = Protocol(Header.GET_SLOW_COLOR, br, pw).run()
+//        val colorDataByte = result
+//            .sliceArray(ProtocolSetting.HEAD_LENGTH.value + ProtocolSetting.DATA_LENGTH.value until result.size)
+//            .first()
+//
+//        val color = if (colorDataByte == PieceColor.BLACK.colorByte) PieceColor.BLACK else PieceColor.WHITE
+        return PieceColor.BLACK
     }
 }
