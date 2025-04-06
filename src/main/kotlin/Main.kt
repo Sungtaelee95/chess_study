@@ -1,4 +1,7 @@
 import controller.ChessGame
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import util.BoardManager
 import util.DelayServerManager
 import view.InputView
@@ -43,20 +46,25 @@ class Protocol(
     }
 
     private fun getSlowColor(sendBytes: ByteArray): ByteArray {
-        sendBytes.forEachIndexed { index, b ->
-            printWriter.println(b)
-            sleep(10)
+        CoroutineScope(Dispatchers.IO).launch {
+            sendBytes.forEach { byte ->
+                printWriter.println(byte)
+                sleep(10)
+            }
         }
-
-        return byteArrayOf()
+        val result = bufferedReader.readLine()
+        return byteArrayOf(result.toByte())
     }
 
     private fun sendMoveSlowInformation(sendBytes: ByteArray): ByteArray {
-        sendBytes.forEachIndexed { index, b ->
-            printWriter.println(b)
-            sleep(10)
+        CoroutineScope(Dispatchers.IO).launch {
+            sendBytes.forEach { byte ->
+                printWriter.println(byte)
+                sleep(10)
+            }
         }
-        return byteArrayOf()
+        val result = bufferedReader.readLine()
+        return byteArrayOf(result.toByte())
     }
 }
 

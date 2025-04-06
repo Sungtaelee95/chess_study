@@ -32,11 +32,11 @@ class DelayServerManager(
         val pw = PrintWriter(socket.outputStream, true)
         val br = socket.inputStream.bufferedReader()
         val result = Protocol(Header.GET_SLOW_COLOR, br, pw).run()
-//        val colorDataByte = result
-//            .sliceArray(ProtocolSetting.HEAD_LENGTH.value + ProtocolSetting.DATA_LENGTH.value until result.size)
-//            .first()
-//
-//        val color = if (colorDataByte == PieceColor.BLACK.colorByte) PieceColor.BLACK else PieceColor.WHITE
-        return PieceColor.BLACK
+        val colorByte = result.first()
+        return when(colorByte) {
+            PieceColor.BLACK.colorByte -> PieceColor.BLACK
+            PieceColor.WHITE.colorByte -> PieceColor.WHITE
+            else -> PieceColor.BLACK
+        }
     }
 }
