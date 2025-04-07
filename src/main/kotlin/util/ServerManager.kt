@@ -1,24 +1,44 @@
 package util
 
+import Header
+import Protocol
 import model.data.MoveInformation
 import model.data.PieceColor
+import java.io.ObjectInputStream
 import java.net.Socket
 
-class ServerManager(socket: Socket) : ServerConnector() {
+class ServerManager(
+    private val socket: Socket
+) : ServerConnector() {
 
     override fun disconnectServer() {
-        TODO("Not yet implemented")
+        socket.close()
     }
 
     override fun sendMoveInformation(moveInformation: MoveInformation) {
-        TODO("Not yet implemented")
+        Protocol(
+            Header.SEND_MOVE_SLOW_HEADER,
+            socket.inputStream,
+            socket.outputStream,
+            moveInformation.toByteArray()
+        ).run()
     }
 
     override fun receiveMoveInformation(): MoveInformation {
-        TODO("Not yet implemented")
+        val inputStream = socket.inputStream
+        val ois = ObjectInputStream(inputStream)
+        val inputObject = ois.readObject() as MoveInformation
+        return inputObject
     }
 
     override fun getChessPieceColor(): PieceColor {
-        TODO("Not yet implemented")
+        val result = Protocol(Header.GET_CLIENT_COLOR_HEADER, socket.inputStream, socket.outputStream).run()
+
+        val colorByte = result.first()
+        return when (colorByte) {
+            PieceColor.BLACK.colorByte -> PieceColor.BLACK
+            PieceColor.WHITE.colorByte -> PieceColor.WHITE
+            else -> PieceColor.BLACK
+        }
     }
 }

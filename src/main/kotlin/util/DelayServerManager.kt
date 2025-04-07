@@ -1,10 +1,10 @@
 package util
 
+import Header
 import Protocol
 import model.data.MoveInformation
 import model.data.PieceColor
 import java.io.ObjectInputStream
-import java.io.PrintWriter
 import java.net.Socket
 
 class DelayServerManager(
@@ -16,9 +16,12 @@ class DelayServerManager(
     }
 
     override fun sendMoveInformation(moveInformation: MoveInformation) {
-        val pw = PrintWriter(socket.outputStream, true)
-        val br = socket.inputStream.bufferedReader()
-        Protocol(Header.SEND_MOVE_SLOW_HEADER, br, pw, moveInformation.toByteArray()).run()
+        Protocol(
+            Header.SEND_MOVE_SLOW_HEADER,
+            socket.inputStream,
+            socket.outputStream,
+            moveInformation.toByteArray()
+        ).run()
     }
 
     override fun receiveMoveInformation(): MoveInformation {
@@ -29,11 +32,9 @@ class DelayServerManager(
     }
 
     override fun getChessPieceColor(): PieceColor {
-        val pw = PrintWriter(socket.outputStream, true)
-        val br = socket.inputStream.bufferedReader()
-        val result = Protocol(Header.GET_SLOW_COLOR, br, pw).run()
+        val result = Protocol(Header.GET_SLOW_CLIENT_COLOR_HEADER, socket.inputStream, socket.outputStream).run()
         val colorByte = result.first()
-        return when(colorByte) {
+        return when (colorByte) {
             PieceColor.BLACK.colorByte -> PieceColor.BLACK
             PieceColor.WHITE.colorByte -> PieceColor.WHITE
             else -> PieceColor.BLACK

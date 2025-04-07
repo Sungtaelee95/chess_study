@@ -1,29 +1,29 @@
 import controller.ChessGame
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import util.BoardManager
-import util.DelayServerManager
+import util.ServerManager
 import view.InputView
 import view.OutputView
-import java.io.BufferedReader
-import java.io.PrintWriter
-import java.lang.Thread.sleep
+import java.io.InputStream
+import java.io.OutputStream
 import java.net.Socket
 import java.nio.ByteBuffer
 
 fun main() {
     val server = Socket("127.0.0.1", 33769)
 //     일반
-//    ChessGame(InputView(), OutputView(), BoardManager(), ServerManager(server)).start()
+    ChessGame(InputView(), OutputView(), BoardManager(), ServerManager(server)).start()
 //     딜레이
-    ChessGame(InputView(), OutputView(), BoardManager(), DelayServerManager(server)).start()
+//    ChessGame(InputView(), OutputView(), BoardManager(), DelayServerManager(server)).start()
 }
 
 class Protocol(
-    private val type: Header,
-    private val bufferedReader: BufferedReader,
-    private val printWriter: PrintWriter,
+    private val header: Header,
+    private val inputStream: InputStream,
+    private val outputStream: OutputStream,
     private val bytes: ByteArray = byteArrayOf(),
 ) {
     fun run(): ByteArray {
@@ -34,44 +34,82 @@ class Protocol(
 
         val sendBytes = ByteArray(bytes.size + 5) { index ->
             when (index) {
-                0 -> type.byte
-                in 1..dataLengthByte.size -> dataLengthByte[index - 1]
-                else -> bytes[index - 5]
+                0 -> header.byte
+                in 1..ProtocolSetting.DATA_LENGTH.value -> dataLengthByte[index - 1]
+                else -> bytes[index - (ProtocolSetting.HEAD_LENGTH.value + ProtocolSetting.DATA_LENGTH.value)]
             }
         }
-        return when (type) {
-            Header.GET_SLOW_COLOR -> getSlowColor(sendBytes)
+        return when (header) {
+            // 지연
+            Header.GET_SLOW_CLIENT_COLOR_HEADER -> getSlowClientColor(sendBytes)
             Header.SEND_MOVE_SLOW_HEADER -> sendMoveSlowInformation(sendBytes)
-            Header.GET_TURN_COLOR -> byteArrayOf()
+            // 일반
+            Header.GET_CLIENT_COLOR_HEADER -> getClientColor(sendBytes)
+            Header.GET_TURN_COLOR_HEADER -> byteArrayOf()
+            Header.SEND_MOVE_INFORMATION_HEADER -> sendMoveInformation(sendBytes)
         }
     }
 
-    private fun getSlowColor(sendBytes: ByteArray): ByteArray {
+    private fun getSlowClientColor(sendBytes: ByteArray): ByteArray {
         CoroutineScope(Dispatchers.IO).launch {
-            sendBytes.forEach { byte ->
-                printWriter.println(byte)
-                sleep(10)
+            sendBytes.forEach {
+                outputStream.write(byteArrayOf(it))
+                outputStream.flush()
+                delay(10)
             }
         }
-        val result = bufferedReader.readLine()
-        return byteArrayOf(result.toByte())
+        return receivedServerMessage()
     }
 
     private fun sendMoveSlowInformation(sendBytes: ByteArray): ByteArray {
         CoroutineScope(Dispatchers.IO).launch {
-            sendBytes.forEach { byte ->
-                printWriter.println(byte)
-                sleep(10)
+            sendBytes.forEach {
+                outputStream.write(byteArrayOf(it))
+                outputStream.flush()
+                delay(10)
             }
         }
-        return byteArrayOf()
+        return receivedServerMessage()
+    }
+
+    private fun getClientColor(sendBytes: ByteArray): ByteArray {
+        CoroutineScope(Dispatchers.IO).launch {
+            outputStream.write(sendBytes)
+            outputStream.flush()
+        }
+        return receivedServerMessage()
+    }
+
+    private fun sendMoveInformation(sendBytes: ByteArray): ByteArray {
+        CoroutineScope(Dispatchers.IO).launch {
+            outputStream.write(sendBytes)
+            outputStream.flush()
+        }
+        return receivedServerMessage()
+    }
+
+    private fun receivedServerMessage(): ByteArray {
+        while (true) {
+            val buffer = ByteArray(21)
+            val bytesRead = inputStream.read(buffer)
+            if (bytesRead > 0) {
+                val receivedBytes = buffer.copyOf(bytesRead)
+                val data = receivedBytes.sliceArray(1 until receivedBytes.size) // 나머지 데이터
+                val sizeArray = ByteArray(ProtocolSetting.DATA_LENGTH.value) { data[it] }
+                val size = ByteBuffer.wrap(sizeArray).getInt()
+                val contentArray = ByteArray(size) { data[it + ProtocolSetting.DATA_LENGTH.value] }
+                return contentArray
+            }
+        }
     }
 }
 
 enum class Header(val byte: Byte) {
-    GET_SLOW_COLOR(0xC1.toByte()),
+    GET_SLOW_CLIENT_COLOR_HEADER(0xC1.toByte()),
     SEND_MOVE_SLOW_HEADER(0xC2.toByte()),
-    GET_TURN_COLOR(0xC4.toByte())
+    GET_TURN_COLOR_HEADER(0xC4.toByte()),
+    GET_CLIENT_COLOR_HEADER(0xC5.toByte()),
+    SEND_MOVE_INFORMATION_HEADER(0xC6.toByte())
 }
 
 enum class ProtocolSetting(val value: Int) {
