@@ -21,6 +21,7 @@ class ChessGame(
     private val serverManager: ServerConnector
 ) {
     private lateinit var _myPieceColor: PieceColor
+    private lateinit var _turnColor: PieceColor
     private lateinit var _board: Array<Array<Square>>
 
     init {
@@ -29,8 +30,8 @@ class ChessGame(
 
     fun start() {
         while (true) {
-            println("선택된 색: ${_myPieceColor.colorName}")
             printBoard()
+
             val selectedSquare = selectSquare()
             val selectedNextPosition = selectNextPosition(selectedSquare)
             if (selectedNextPosition.isRecommend()) return start()

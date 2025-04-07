@@ -42,6 +42,7 @@ class Protocol(
         return when (type) {
             Header.GET_SLOW_COLOR -> getSlowColor(sendBytes)
             Header.SEND_MOVE_SLOW_HEADER -> sendMoveSlowInformation(sendBytes)
+            Header.GET_TURN_COLOR -> byteArrayOf()
         }
     }
 
@@ -63,14 +64,14 @@ class Protocol(
                 sleep(10)
             }
         }
-        val result = bufferedReader.readLine()
-        return byteArrayOf(result.toByte())
+        return byteArrayOf()
     }
 }
 
 enum class Header(val byte: Byte) {
     GET_SLOW_COLOR(0xC1.toByte()),
-    SEND_MOVE_SLOW_HEADER(0xC2.toByte())
+    SEND_MOVE_SLOW_HEADER(0xC2.toByte()),
+    GET_TURN_COLOR(0xC4.toByte())
 }
 
 enum class ProtocolSetting(val value: Int) {
