@@ -3,6 +3,10 @@ package view
 class OutputView {
     private val reset = "\u001B[0m"
 
+    fun printTurnWaitMessage() {
+        println("상대방의 입력을 기다리고 있습니다.")
+    }
+
     fun printRestartMessage() {
         println("상대방의 왕을 잡아 게임이 종료되었습니다.\n다시 시작하려면 1, 종료하시려면 0을 입력해주세요.")
     }

@@ -14,8 +14,9 @@ data class MoveInformation(
 
     companion object {
         fun fromByteArray(array: ByteArray): MoveInformation {
+            println("fromByteArray, arraySize: ${array.size}")
             val buffer = ByteBuffer.wrap(array)
-            return MoveInformation(Node(buffer.int, buffer.int), Node(buffer.int, buffer.int))
+            return MoveInformation(Node(buffer.getInt(), buffer.getInt()), Node(buffer.getInt(), buffer.getInt()))
         }
     }
 }

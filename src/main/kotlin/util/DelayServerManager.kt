@@ -11,11 +11,11 @@ class DelayServerManager(
     private val socket: Socket
 ) : ServerConnector() {
 
-    override fun disconnectServer() {
+    override suspend fun disconnectServer() {
         socket.close()
     }
 
-    override fun sendMoveInformation(moveInformation: MoveInformation) {
+    override suspend fun sendMoveInformation(moveInformation: MoveInformation) {
         Protocol(
             Header.SEND_MOVE_SLOW_HEADER,
             socket.inputStream,
@@ -24,17 +24,27 @@ class DelayServerManager(
         ).run()
     }
 
-    override fun receiveMoveInformation(): MoveInformation {
+    override suspend fun receiveMoveInformation(): MoveInformation {
         val inputStream = socket.inputStream
         val ois = ObjectInputStream(inputStream)
         val inputObject = ois.readObject() as MoveInformation
         return inputObject
     }
 
-    override fun getChessPieceColor(): PieceColor {
+    override suspend fun getChessPieceColor(): PieceColor {
         val result = Protocol(Header.GET_SLOW_CLIENT_COLOR_HEADER, socket.inputStream, socket.outputStream).run()
         val colorByte = result.first()
         return when (colorByte) {
+            PieceColor.BLACK.colorByte -> PieceColor.BLACK
+            PieceColor.WHITE.colorByte -> PieceColor.WHITE
+            else -> PieceColor.BLACK
+        }
+    }
+
+    override suspend fun getTurnColor(): PieceColor {
+        val result = Protocol(Header.GET_TURN_COLOR_HEADER, socket.inputStream, socket.outputStream).run()
+        val turnColor = result.first()
+        return when (turnColor) {
             PieceColor.BLACK.colorByte -> PieceColor.BLACK
             PieceColor.WHITE.colorByte -> PieceColor.WHITE
             else -> PieceColor.BLACK

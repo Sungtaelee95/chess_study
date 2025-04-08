@@ -1,14 +1,12 @@
 package controller
 
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 import model.RestartCommend
 import model.SelectPosition
 import model.SelectSquare
 import model.Square
-import model.data.BackGround
-import model.data.MoveInformation
-import model.data.Node
-import model.data.PieceColor
-import model.data.Type
+import model.data.*
 import util.BoardManager
 import util.ServerConnector
 import view.InputView
@@ -21,35 +19,48 @@ class ChessGame(
     private val serverManager: ServerConnector
 ) {
     private lateinit var _myPieceColor: PieceColor
-    private lateinit var _turnColor: PieceColor
     private lateinit var _board: Array<Array<Square>>
-
-    init {
-        gameSetUp()
-    }
-
-    fun start() {
+    private var _turnColor: PieceColor = PieceColor.WHITE
+    fun start() = runBlocking {
         while (true) {
+            _turnColor = serverManager.getTurnColor()
+            if (!isMyTurn()) {
+                val moveInformation = serverManager.receiveMoveInformation()
+                movePiece(moveInformation.oriNode, moveInformation.newNode)
+                continue
+            }
             printBoard()
-
             val selectedSquare = selectSquare()
             val selectedNextPosition = selectNextPosition(selectedSquare)
-            if (selectedNextPosition.isRecommend()) return start()
-            movePiece(selectedSquare, selectedNextPosition)
-            turnChange()
+            if (selectedNextPosition.isRecommend()) continue
+            movePiece(selectedSquare.getPositionNode(), selectedNextPosition.getPositionNode())
+            sendMoveInformation(selectedSquare.getPositionNode(), selectedNextPosition.getPositionNode())
+            _turnColor = serverManager.getTurnColor()
             if (isOtherKingLive()) continue
             printBoard()
             if (requestRestartGame()) {
                 gameSetUp()
-                return start()
+                continue
             }
             break
         }
     }
 
-    private fun gameSetUp() {
+    suspend fun gameSetUp() {
         _board = boardManager.create()
         _myPieceColor = serverManager.getChessPieceColor()
+    }
+
+    private suspend fun sendMoveInformation(
+        oriNode: Node,
+        newNode: Node,
+    ) {
+        serverManager.sendMoveInformation(MoveInformation(oriNode, newNode))
+    }
+    private fun isMyTurn(): Boolean {
+        printBoard()
+        outputView.printTurnWaitMessage()
+        return _myPieceColor == _turnColor
     }
 
     private fun requestRestartGame(): Boolean {
@@ -72,20 +83,16 @@ class ChessGame(
     }
 
     private fun turnChange() {
-        _myPieceColor = if (_myPieceColor == PieceColor.WHITE) PieceColor.BLACK else PieceColor.WHITE
+        _turnColor = if (_turnColor == PieceColor.WHITE) PieceColor.BLACK else PieceColor.WHITE
     }
 
     private fun movePiece(
-        selectedSquare: SelectSquare,
-        selectPosition: SelectPosition,
+        oriNode: Node,
+        newNode: Node,
     ) {
-        val oriNode = selectedSquare.getPositionNode()
-        val newNode = selectPosition.getPositionNode()
         val oriSquare = _board[oriNode.row][oriNode.col]
         _board[oriNode.row][oriNode.col] = _board[oriNode.row][oriNode.col].pollPiece()
         _board[newNode.row][newNode.col] = _board[newNode.row][newNode.col].update(oriSquare)
-        // 서버에 움직인 정보 전달.
-        serverManager.sendMoveInformation(MoveInformation(oriNode, newNode))
     }
 
     private fun selectNextPosition(
