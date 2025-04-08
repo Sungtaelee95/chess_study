@@ -7,11 +7,11 @@ class ServerManager(
     private val socket: Socket
 ) : ServerConnector() {
 
-    override suspend fun disconnectServer() {
+    override fun disconnectServer() {
         socket.close()
     }
 
-    override suspend fun sendMoveInformation(moveInformation: MoveInformation) {
+    override fun sendMoveInformation(moveInformation: MoveInformation) {
         Protocol(
             Header.SEND_MOVE_INFORMATION_HEADER,
             socket.inputStream,
@@ -20,7 +20,7 @@ class ServerManager(
         ).run()
     }
 
-    override suspend fun receiveMoveInformation(): MoveInformation {
+    override fun receiveMoveInformation(): MoveInformation {
         val result =
             Protocol(
                 Header.GET_OTHER_CLIENT_MOVE_INFORMATION,
@@ -31,7 +31,7 @@ class ServerManager(
         return MoveInformation.fromByteArray(result)
     }
 
-    override suspend fun getChessPieceColor(): PieceColor {
+    override fun getChessPieceColor(): PieceColor {
         val result = Protocol(Header.GET_CLIENT_COLOR_HEADER, socket.inputStream, socket.outputStream).run()
         val colorByte = result.first()
         return when (colorByte) {
@@ -41,7 +41,7 @@ class ServerManager(
         }
     }
 
-    override suspend fun getTurnColor(): PieceColor {
+    override fun getTurnColor(): PieceColor {
         val result =
             Protocol(Header.GET_TURN_COLOR_HEADER, socket.inputStream, socket.outputStream).run()
         val turnColor = result.first()

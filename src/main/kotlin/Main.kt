@@ -1,5 +1,4 @@
 import controller.ChessGame
-import kotlinx.coroutines.runBlocking
 import util.BoardManager
 import view.InputView
 import view.OutputView
@@ -8,7 +7,7 @@ import java.io.OutputStream
 import java.net.Socket
 import java.nio.ByteBuffer
 
-fun main() = runBlocking {
+fun main() {
     val server = Socket("127.0.0.1", 33769)
 //     일반
     val game = ChessGame(InputView(), OutputView(), BoardManager(), ServerManager(server))

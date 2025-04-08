@@ -1,7 +1,5 @@
 package controller
 
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
 import model.RestartCommend
 import model.SelectPosition
 import model.SelectSquare
@@ -21,7 +19,7 @@ class ChessGame(
     private lateinit var _myPieceColor: PieceColor
     private lateinit var _board: Array<Array<Square>>
     private var _turnColor: PieceColor = PieceColor.WHITE
-    fun start() = runBlocking {
+    fun start() {
         while (true) {
             _turnColor = serverManager.getTurnColor()
             if (!isMyTurn()) {
@@ -46,17 +44,18 @@ class ChessGame(
         }
     }
 
-    suspend fun gameSetUp() {
+    fun gameSetUp() {
         _board = boardManager.create()
         _myPieceColor = serverManager.getChessPieceColor()
     }
 
-    private suspend fun sendMoveInformation(
+    private fun sendMoveInformation(
         oriNode: Node,
         newNode: Node,
     ) {
         serverManager.sendMoveInformation(MoveInformation(oriNode, newNode))
     }
+
     private fun isMyTurn(): Boolean {
         printBoard()
         outputView.printTurnWaitMessage()
