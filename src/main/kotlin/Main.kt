@@ -1,21 +1,28 @@
 import controller.ChessGame
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import model.network.DelayServerManager
+import model.network.config.Header
+import model.network.config.ProtocolSetting
 import util.BoardManager
 import view.InputView
 import view.OutputView
 import java.io.InputStream
 import java.io.OutputStream
+import java.lang.Thread.sleep
 import java.net.Socket
 import java.nio.ByteBuffer
 
 fun main() {
     val server = Socket("127.0.0.1", 33769)
 //     일반
-    val game = ChessGame(InputView(), OutputView(), BoardManager(), ServerManager(server))
-    game.gameSetUp()
-    game.start()
+//    val game = ChessGame(InputView(), OutputView(), BoardManager(), model.network.ServerManager(server))
+//    game.start()
 
 //     딜레이
-//    ChessGame(InputView(), OutputView(), BoardManager(), DelayServerManager(server)).start()
+    ChessGame(InputView(), OutputView(), BoardManager(), DelayServerManager(server)).start()
 }
 
 class Protocol(
@@ -39,14 +46,26 @@ class Protocol(
         }
         return when (header) {
             // 지연
-            Header.GET_SLOW_CLIENT_COLOR_HEADER -> getClientColor(sendBytes) // 수정 필요
-            Header.SEND_MOVE_SLOW_HEADER -> sendMoveInformation(sendBytes) // 수정 필요
-            //
+            Header.GET_SLOW_CLIENT_COLOR_HEADER -> getClientColorSlow(sendBytes) // 수정 진행
+            Header.SEND_MOVE_SLOW_HEADER -> sendMoveInformationSlow(sendBytes) // 수정 필요
+            Header.GET_TURN_COLOR_SLOW_HEADER -> getTurnColorSlow(sendBytes)
+            // 일반
             Header.GET_CLIENT_COLOR_HEADER -> getClientColor(sendBytes) // 완
             Header.GET_TURN_COLOR_HEADER -> getTurnColor(sendBytes) // 완
-            Header.SEND_MOVE_INFORMATION_HEADER -> sendMoveInformation(sendBytes)
-            Header.GET_OTHER_CLIENT_MOVE_INFORMATION -> receivedServerMessage()
+            Header.SEND_MOVE_INFORMATION_HEADER -> sendMoveInformation(sendBytes) // 완
+            // 공통
+            Header.GET_OTHER_CLIENT_MOVE_INFORMATION -> receivedServerMessage() // 완
         }
+    }
+
+    private fun getClientColorSlow(sendBytes: ByteArray): ByteArray {
+        sendBytes.forEach {
+            outputStream.write(byteArrayOf(it))
+            outputStream.flush()
+            sleep(10)
+        }
+        println("getClientColorSlow")
+        return receivedServerMessage()
     }
 
     private fun getClientColor(sendBytes: ByteArray): ByteArray {
@@ -56,11 +75,33 @@ class Protocol(
         return receivedServerMessage()
     }
 
+    private fun sendMoveInformationSlow(sendBytes: ByteArray): ByteArray {
+        sendBytes.forEach {
+            outputStream.write(byteArrayOf(it))
+            outputStream.flush()
+            sleep(10)
+        }
+        println("sendMoveInformationSlow")
+        return byteArrayOf()
+    }
+
     private fun sendMoveInformation(sendBytes: ByteArray): ByteArray {
         outputStream.write(sendBytes)
         outputStream.flush()
         println("sendMoveInformation")
         return byteArrayOf()
+    }
+
+    private fun getTurnColorSlow(sendBytes: ByteArray): ByteArray {
+        CoroutineScope(Dispatchers.IO).launch {
+            sendBytes.forEach {
+                outputStream.write(byteArrayOf(it))
+                outputStream.flush()
+                delay(10)
+            }
+        }
+        println("getTurnColorSlow")
+        return receivedServerMessage()
     }
 
     private fun getTurnColor(sendBytes: ByteArray): ByteArray {
@@ -86,21 +127,5 @@ class Protocol(
     }
 }
 
-enum class Header(val byte: Byte) {
-    // 지연
-    GET_SLOW_CLIENT_COLOR_HEADER(0xC1.toByte()),
-    SEND_MOVE_SLOW_HEADER(0xC2.toByte()),
 
-    // 일반
-    GET_TURN_COLOR_HEADER(0xC4.toByte()),
-    GET_CLIENT_COLOR_HEADER(0xC5.toByte()),
-    SEND_MOVE_INFORMATION_HEADER(0xC6.toByte()),
-    GET_OTHER_CLIENT_MOVE_INFORMATION(0xC7.toByte())
-}
 
-enum class ProtocolSetting(val value: Int) {
-    HEAD_LENGTH(1),
-    DATA_LENGTH(4),
-    POSITION_DATA_LENGTH(4),
-    COLOR_DATA_LENGTH(1)
-}

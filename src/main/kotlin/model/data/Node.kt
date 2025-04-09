@@ -1,5 +1,6 @@
 package model.data
 
+import model.network.config.ProtocolSetting
 import java.nio.ByteBuffer
 
 data class Node(

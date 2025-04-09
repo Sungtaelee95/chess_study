@@ -6,7 +6,7 @@ import model.SelectSquare
 import model.Square
 import model.data.*
 import util.BoardManager
-import util.ServerConnector
+import model.network.ServerConnector
 import view.InputView
 import view.OutputView
 
@@ -19,12 +19,14 @@ class ChessGame(
     private lateinit var _myPieceColor: PieceColor
     private lateinit var _board: Array<Array<Square>>
     private var _turnColor: PieceColor = PieceColor.WHITE
+
+    init {
+        gameSetUp()
+    }
     fun start() {
         while (true) {
-            _turnColor = serverManager.getTurnColor()
             if (!isMyTurn()) {
-                val moveInformation = serverManager.receiveMoveInformation()
-                movePiece(moveInformation.oriNode, moveInformation.newNode)
+                receiveMoveInformation()
                 continue
             }
             printBoard()
@@ -44,9 +46,10 @@ class ChessGame(
         }
     }
 
-    fun gameSetUp() {
+    private fun gameSetUp() {
         _board = boardManager.create()
         _myPieceColor = serverManager.getChessPieceColor()
+        _turnColor = serverManager.getTurnColor()
     }
 
     private fun sendMoveInformation(
@@ -56,9 +59,15 @@ class ChessGame(
         serverManager.sendMoveInformation(MoveInformation(oriNode, newNode))
     }
 
+    private fun receiveMoveInformation() {
+        val moveInformation = serverManager.receiveMoveInformation()
+        movePiece(moveInformation.oriNode, moveInformation.newNode)
+    }
+
     private fun isMyTurn(): Boolean {
         printBoard()
         outputView.printTurnWaitMessage()
+        _turnColor = serverManager.getTurnColor()
         return _myPieceColor == _turnColor
     }
 
